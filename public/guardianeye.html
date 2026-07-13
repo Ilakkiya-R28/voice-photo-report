@@ -278,6 +278,7 @@ const state = (function loadState(){
       const s = JSON.parse(raw);
       s.imgBase64 = null; s.imgMime = null;
       if(!Array.isArray(s.feed)) s.feed = DEFAULT_FEED.slice();
+      if(!Array.isArray(s.audit)) s.audit = [];
       return s;
     }
   } catch(e){}
@@ -291,6 +292,7 @@ const state = (function loadState(){
       { name: "Vikram D.", points: 30 },
     ],
     feed: DEFAULT_FEED.slice(),
+    audit: [],
     imgBase64: null,
     imgMime: null,
   };
