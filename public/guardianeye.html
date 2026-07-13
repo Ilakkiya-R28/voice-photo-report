@@ -289,6 +289,7 @@ function addPoints(n){
   const b = document.getElementById("pointsBadge");
   b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump");
   renderLeaderboard();
+  persist();
 }
 function renderLeaderboard(){
   const all = [...state.leaders, state.you].sort((a,b)=>b.points-a.points);
@@ -300,20 +301,48 @@ function renderLeaderboard(){
     </div>`).join("");
 }
 function addToFeed(item){
+  if(!item.id) item.id = "r_" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   state.feed.unshift(item);
   renderFeed();
+  persist();
 }
+function deleteReport(id){
+  const idx = state.feed.findIndex(f=>f.id===id);
+  if(idx<0) return;
+  if(state.feed[idx].owner !== USER_ID){
+    alert("Only the person who filed this report can delete it.");
+    return;
+  }
+  if(!confirm("Delete your report? This cannot be undone.")) return;
+  state.feed.splice(idx,1);
+  // refund the points for the deleted report
+  state.points = Math.max(0, state.points - 10);
+  state.you.points = Math.max(0, state.you.points - 10);
+  document.getElementById("points").textContent = state.points;
+  renderLeaderboard();
+  renderFeed();
+  persist();
+}
+window.deleteReport = deleteReport;
 function renderFeed(){
   const el = document.getElementById("feed");
-  el.innerHTML = state.feed.map(f=>`
+  el.innerHTML = state.feed.map(f=>{
+    const mine = f.owner === USER_ID;
+    return `
     <div class="item">
-      <div class="top"><span>${f.who}</span><span>${f.ago}</span></div>
-      <div><span class="cat">${f.cat}</span></div>
+      <div class="top">
+        <span>${escapeHtml(f.who)}${mine?' <span style="color:var(--brand);font-weight:700">• you</span>':''}</span>
+        <span>${escapeHtml(f.ago)}</span>
+      </div>
+      <div><span class="cat">${escapeHtml(f.cat)}</span></div>
       <div style="margin-top:4px;font-size:14px">${escapeHtml(f.text)}</div>
-    </div>`).join("");
+      ${mine?`<div style="margin-top:8px;text-align:right"><button class="btn ghost" style="padding:6px 10px;font-size:12px" onclick="deleteReport('${f.id}')">🗑️ Delete my report</button></div>`:''}
+    </div>`;
+  }).join("");
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
+document.getElementById("points").textContent = state.points;
 renderFeed(); renderLeaderboard();
 
 /* ============ COMPLAINT CARD ============ */
@@ -341,7 +370,7 @@ function renderComplaint(target, data, extra){
       <div class="draft">${escapeHtml(draft)}</div>
     </div>`;
   addPoints(10);
-  addToFeed({ who:"You, Your Block", cat:cat, text:draft.length>140?draft.slice(0,140)+"…":draft, ago:"just now" });
+  addToFeed({ who:"You, Your Block", cat:cat, text:draft.length>140?draft.slice(0,140)+"…":draft, ago:"just now", owner: USER_ID });
 }
 
 /* ============ AI CALL ============ */
