@@ -112,6 +112,21 @@
   .hint{font-size:12px;color:var(--muted);margin-top:6px}
   .spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
   @keyframes spin{to{transform:rotate(360deg)}}
+  .audit{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto}
+  .audit .a{border-left:3px solid var(--crit);background:#fdf6f6;padding:8px 10px;border-radius:8px;font-size:13px}
+  .audit .a .meta{color:var(--muted);font-size:11.5px;margin-bottom:2px;display:flex;justify-content:space-between;gap:8px}
+  .audit .a .reason{margin-top:4px;font-style:italic;color:#5a1a1a}
+  .audit .empty{color:var(--muted);font-size:13px;font-style:italic}
+
+  /* Modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(15,42,43,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal-bg.open{display:flex}
+  .modal{background:#fff;border-radius:14px;max-width:440px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .modal h3{margin:0 0 6px;font-size:17px}
+  .modal .sum{background:#f7fbfa;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;margin:10px 0}
+  .modal textarea{min-height:70px}
+  .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .btn.danger{background:var(--crit)}
   footer{text-align:center;color:var(--muted);font-size:12px;padding:18px}
 </style>
 </head>
@@ -217,11 +232,30 @@
       <h2>🏆 Leaderboard</h2>
       <div class="leaders" id="leaderboard"></div>
       <div class="disclaimer">Earn points for every verified report you file.</div>
+    <div class="card">
+      <h2>🧾 Deletion Audit Trail</h2>
+      <div class="muted" style="margin-bottom:8px">Every complaint you delete is logged here for accountability.</div>
+      <div id="auditLog"></div>
     </div>
   </aside>
 </main>
 
 <footer>Built for Open Innovation • GuardianEye demo</footer>
+
+<!-- Delete confirmation modal -->
+<div class="modal-bg" id="delModal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>Delete your complaint?</h3>
+    <div class="muted" style="font-size:13px">This action is permanent and will be recorded in your audit trail.</div>
+    <div class="sum" id="delSummary"></div>
+    <label class="muted" style="font-size:12px">Reason for deletion (required)</label>
+    <textarea id="delReason" placeholder="e.g. Duplicate report / Issue already resolved / Filed by mistake"></textarea>
+    <div class="actions">
+      <button class="btn ghost" id="delCancel">Cancel</button>
+      <button class="btn danger" id="delConfirm">Delete & log</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ============ IDENTITY (per-browser registered reporter) ============ */
@@ -244,6 +278,7 @@ const state = (function loadState(){
       const s = JSON.parse(raw);
       s.imgBase64 = null; s.imgMime = null;
       if(!Array.isArray(s.feed)) s.feed = DEFAULT_FEED.slice();
+      if(!Array.isArray(s.audit)) s.audit = [];
       return s;
     }
   } catch(e){}
@@ -257,6 +292,7 @@ const state = (function loadState(){
       { name: "Vikram D.", points: 30 },
     ],
     feed: DEFAULT_FEED.slice(),
+    audit: [],
     imgBase64: null,
     imgMime: null,
   };
@@ -306,24 +342,86 @@ function addToFeed(item){
   renderFeed();
   persist();
 }
+/* ============ DELETE + AUDIT TRAIL ============ */
+let pendingDeleteId = null;
 function deleteReport(id){
-  const idx = state.feed.findIndex(f=>f.id===id);
-  if(idx<0) return;
-  if(state.feed[idx].owner !== USER_ID){
+  const r = state.feed.find(f=>f.id===id);
+  if(!r) return;
+  if(r.owner !== USER_ID){
     alert("Only the person who filed this report can delete it.");
     return;
   }
-  if(!confirm("Delete your report? This cannot be undone.")) return;
+  pendingDeleteId = id;
+  document.getElementById("delSummary").innerHTML =
+    `<strong>${escapeHtml(r.cat)}</strong> — ${escapeHtml(r.text)}`;
+  document.getElementById("delReason").value = "";
+  document.getElementById("delModal").classList.add("open");
+  setTimeout(()=>document.getElementById("delReason").focus(), 50);
+}
+window.deleteReport = deleteReport;
+
+function closeDeleteModal(){
+  pendingDeleteId = null;
+  document.getElementById("delModal").classList.remove("open");
+}
+function confirmDelete(){
+  const reason = document.getElementById("delReason").value.trim();
+  if(!reason){
+    alert("Please enter a reason so it can be recorded in the audit trail.");
+    return;
+  }
+  const idx = state.feed.findIndex(f=>f.id===pendingDeleteId);
+  if(idx<0){ closeDeleteModal(); return; }
+  const r = state.feed[idx];
+  const now = new Date();
+  state.audit.unshift({
+    id: "a_" + now.getTime().toString(36),
+    reportId: r.id,
+    category: r.cat,
+    text: r.text,
+    reason,
+    ts: now.toISOString(),
+    by: USER_ID,
+  });
   state.feed.splice(idx,1);
-  // refund the points for the deleted report
   state.points = Math.max(0, state.points - 10);
   state.you.points = Math.max(0, state.you.points - 10);
   document.getElementById("points").textContent = state.points;
   renderLeaderboard();
   renderFeed();
+  renderAudit();
   persist();
+  closeDeleteModal();
 }
-window.deleteReport = deleteReport;
+document.getElementById("delCancel").addEventListener("click", closeDeleteModal);
+document.getElementById("delConfirm").addEventListener("click", confirmDelete);
+document.getElementById("delModal").addEventListener("click", (e)=>{
+  if(e.target.id === "delModal") closeDeleteModal();
+});
+
+function fmtTs(iso){
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined,{ dateStyle:"medium", timeStyle:"short" });
+  } catch(e){ return iso; }
+}
+function renderAudit(){
+  const el = document.getElementById("auditLog");
+  if(!el) return;
+  if(!state.audit || !state.audit.length){
+    el.innerHTML = '<div class="audit"><div class="empty">No deletions yet. Reports you delete will be logged here.</div></div>';
+    return;
+  }
+  el.innerHTML = '<div class="audit">' + state.audit.map(a=>`
+    <div class="a">
+      <div class="meta">
+        <span>🗑️ ${escapeHtml(a.category)}</span>
+        <span>${escapeHtml(fmtTs(a.ts))}</span>
+      </div>
+      <div>${escapeHtml(a.text)}</div>
+      <div class="reason">Reason: ${escapeHtml(a.reason)}</div>
+    </div>`).join("") + '</div>';
+}
 function renderFeed(){
   const el = document.getElementById("feed");
   el.innerHTML = state.feed.map(f=>{
@@ -343,7 +441,7 @@ function renderFeed(){
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
 document.getElementById("points").textContent = state.points;
-renderFeed(); renderLeaderboard();
+renderFeed(); renderLeaderboard(); renderAudit();
 
 /* ============ COMPLAINT CARD ============ */
 function severityClass(s){
