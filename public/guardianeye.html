@@ -242,6 +242,21 @@
 
 <footer>Built for Open Innovation • GuardianEye demo</footer>
 
+<!-- Delete confirmation modal -->
+<div class="modal-bg" id="delModal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>Delete your complaint?</h3>
+    <div class="muted" style="font-size:13px">This action is permanent and will be recorded in your audit trail.</div>
+    <div class="sum" id="delSummary"></div>
+    <label class="muted" style="font-size:12px">Reason for deletion (required)</label>
+    <textarea id="delReason" placeholder="e.g. Duplicate report / Issue already resolved / Filed by mistake"></textarea>
+    <div class="actions">
+      <button class="btn ghost" id="delCancel">Cancel</button>
+      <button class="btn danger" id="delConfirm">Delete & log</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============ IDENTITY (per-browser registered reporter) ============ */
 const STORE_KEY = "guardianeye.v1";
