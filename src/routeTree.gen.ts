@@ -10,33 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiGuardianeyeAnalyzeRouteImport } from './routes/api/guardianeye-analyze'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGuardianeyeAnalyzeRoute = ApiGuardianeyeAnalyzeRouteImport.update({
+  id: '/api/guardianeye-analyze',
+  path: '/api/guardianeye-analyze',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/guardianeye-analyze': typeof ApiGuardianeyeAnalyzeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/guardianeye-analyze': typeof ApiGuardianeyeAnalyzeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/guardianeye-analyze': typeof ApiGuardianeyeAnalyzeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/api/guardianeye-analyze'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/api/guardianeye-analyze'
+  id: '__root__' | '/' | '/api/guardianeye-analyze'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiGuardianeyeAnalyzeRoute: typeof ApiGuardianeyeAnalyzeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +58,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/guardianeye-analyze': {
+      id: '/api/guardianeye-analyze'
+      path: '/api/guardianeye-analyze'
+      fullPath: '/api/guardianeye-analyze'
+      preLoaderRoute: typeof ApiGuardianeyeAnalyzeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiGuardianeyeAnalyzeRoute: ApiGuardianeyeAnalyzeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
