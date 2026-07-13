@@ -319,42 +319,16 @@ function renderComplaint(target, data, extra){
   addToFeed({ who:"You, Your Block", cat:cat, text:draft.length>140?draft.slice(0,140)+"…":draft, ago:"just now" });
 }
 
-/* ============ ANTHROPIC CALL ============ */
-async function callClaude(messages, systemPrompt){
-  const body = {
-    model: "claude-sonnet-4-6",
-    max_tokens: 1000,
-    system: systemPrompt,
-    messages,
-  };
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+/* ============ AI CALL ============ */
+async function analyzeReport(payload){
+  const res = await fetch("/api/guardianeye-analyze", {
     method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "anthropic-dangerous-direct-browser-access":"true",
-      "anthropic-version":"2023-06-01"
-    },
-    body: JSON.stringify(body)
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
   });
-  if(!res.ok){
-    const t = await res.text().catch(()=> "");
-    throw new Error("API error "+res.status+": "+t.slice(0,200));
-  }
-  const j = await res.json();
-  const text = (j.content||[]).map(c=>c.text||"").join("").trim();
-  return extractJson(text);
-}
-function extractJson(text){
-  // find first { ... } block
-  const m = text.match(/\{[\s\S]*\}/);
-  if(!m) throw new Error("No JSON in AI response");
-  // allow single quotes fallback
-  let s = m[0];
-  try { return JSON.parse(s); }
-  catch(e){
-    s = s.replace(/'/g,'"');
-    return JSON.parse(s);
-  }
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || "AI request failed.");
+  return data;
 }
 
 /* ============ PHOTO MODE ============ */
@@ -391,20 +365,11 @@ document.getElementById("analyzeBtn").addEventListener("click", async ()=>{
   btn.disabled = true; spin.innerHTML = '<span class="spinner"></span>';
   document.getElementById("photoErr").innerHTML = "";
   try {
-    const systemPrompt = `You are GuardianEye, a civic issue analyzer. Given a photo of a local problem, identify:
-1. Category (Sanitation, Road/Infrastructure, Water/Utility, Public Safety, Animal Welfare, Electrical, Other)
-2. Severity (Low, Medium, High, Critical) based on visible risk to public safety or health
-3. A professional, official-sounding complaint draft (2-3 sentences) describing what is visible, suitable for submission to a municipal authority
-Respond ONLY in this JSON format:
-{"category": "...", "severity": "...", "draft": "..."}
-If the image does not show a clear civic issue, say so honestly in the draft and use category "Other" and severity "Low" instead of forcing a category.`;
-    const data = await callClaude([{
-      role:"user",
-      content:[
-        { type:"image", source:{ type:"base64", media_type: state.imgMime, data: state.imgBase64 } },
-        { type:"text", text:"Analyze this photo and reply with the JSON only." }
-      ]
-    }], systemPrompt);
+    const data = await analyzeReport({
+      mode:"photo",
+      imageBase64: state.imgBase64,
+      imageMime: state.imgMime
+    });
     renderComplaint(document.getElementById("photoResult"), data);
   } catch(e){
     showErr("photoErr", friendlyErr(e));
@@ -480,19 +445,7 @@ async function submitTextual(text, mode){
   try {
     const langCode = mode==="voice" ? document.getElementById("lang").value : "en-IN";
     const wantVoice = mode==="voice";
-    const systemPrompt = `You are GuardianEye. Given a spoken or written complaint transcript (possibly informal, short, or in another language), identify:
-1. Category (Sanitation, Road/Infrastructure, Water/Utility, Public Safety, Animal Welfare, Electrical, Other)
-2. Severity (Low, Medium, High, Critical)
-3. A professional, official-sounding complaint draft (2-3 sentences) suitable for submission to a municipal authority, written in English.
-${wantVoice ? `4. A short (max 2 sentence) warm, reassuring 'voice_reply' in the SAME LANGUAGE as the user's input (language hint: ${langCode}), confirming their issue was logged and will be addressed.` : ""}
-Respond ONLY in JSON:
-${wantVoice
-  ? `{"category":"...","severity":"...","draft":"...","voice_reply":"..."}`
-  : `{"category":"...","severity":"...","draft":"..."}`}`;
-    const data = await callClaude(
-      [{ role:"user", content: text }],
-      systemPrompt
-    );
+    const data = await analyzeReport({ mode, text, lang: langCode });
     const extra = mode==="voice" ? `You said: "${escapeHtml(text)}"` : null;
     renderComplaint(document.getElementById(resultId), data, extra);
     if(wantVoice && data.voice_reply){
@@ -523,6 +476,8 @@ function showErr(id,msg){
 function friendlyErr(e){
   const m = (e && e.message) || String(e);
   if(m.includes("Failed to fetch")) return "Couldn't reach the AI service. Check your connection and try again.";
+  if(m.includes("402")) return "AI credits are exhausted for this workspace. Please add credits and try again.";
+  if(m.includes("429")) return "The AI service is busy right now. Please retry in a moment.";
   if(m.includes("401") || m.includes("403")) return "The AI service rejected the request. Please try again.";
   return "Something went wrong: " + m;
 }
