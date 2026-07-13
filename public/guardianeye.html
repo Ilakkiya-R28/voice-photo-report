@@ -112,6 +112,21 @@
   .hint{font-size:12px;color:var(--muted);margin-top:6px}
   .spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
   @keyframes spin{to{transform:rotate(360deg)}}
+  .audit{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto}
+  .audit .a{border-left:3px solid var(--crit);background:#fdf6f6;padding:8px 10px;border-radius:8px;font-size:13px}
+  .audit .a .meta{color:var(--muted);font-size:11.5px;margin-bottom:2px;display:flex;justify-content:space-between;gap:8px}
+  .audit .a .reason{margin-top:4px;font-style:italic;color:#5a1a1a}
+  .audit .empty{color:var(--muted);font-size:13px;font-style:italic}
+
+  /* Modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(15,42,43,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal-bg.open{display:flex}
+  .modal{background:#fff;border-radius:14px;max-width:440px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .modal h3{margin:0 0 6px;font-size:17px}
+  .modal .sum{background:#f7fbfa;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;margin:10px 0}
+  .modal textarea{min-height:70px}
+  .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .btn.danger{background:var(--crit)}
   footer{text-align:center;color:var(--muted);font-size:12px;padding:18px}
 </style>
 </head>
