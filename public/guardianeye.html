@@ -224,25 +224,50 @@
 <footer>Built for Open Innovation • GuardianEye demo</footer>
 
 <script>
-/* ============ STATE ============ */
-const state = {
-  points: 0,
-  you: { name: "You", points: 0 },
-  leaders: [
-    { name: "Priya S.", points: 140 },
-    { name: "Rahul M.", points: 90 },
-    { name: "Anjali K.", points: 60 },
-    { name: "Vikram D.", points: 30 },
-  ],
-  feed: [
-    { who:"Priya, Block B", cat:"Sanitation", text:"Garbage not cleared for 2 days near main gate.", ago:"12 min ago" },
-    { who:"Rahul, Block A", cat:"Road/Infrastructure", text:"Large pothole opened up after last night's rain.", ago:"28 min ago" },
-    { who:"Anjali, Block D", cat:"Electrical", text:"Streetlight flickering at the park entrance.", ago:"41 min ago" },
-    { who:"Vikram, Block C", cat:"Water/Utility", text:"Continuous water leak on the side road.", ago:"1 hr ago" },
-  ],
-  imgBase64: null,
-  imgMime: null,
-};
+/* ============ IDENTITY (per-browser registered reporter) ============ */
+const STORE_KEY = "guardianeye.v1";
+let USER_ID = localStorage.getItem("guardianeye.uid");
+if(!USER_ID){ USER_ID = "u_" + Math.random().toString(36).slice(2,10); localStorage.setItem("guardianeye.uid", USER_ID); }
+
+const DEFAULT_FEED = [
+  { id:"s1", who:"Priya, Block B", cat:"Sanitation", text:"Garbage not cleared for 2 days near main gate.", ago:"12 min ago", owner:"seed" },
+  { id:"s2", who:"Rahul, Block A", cat:"Road/Infrastructure", text:"Large pothole opened up after last night's rain.", ago:"28 min ago", owner:"seed" },
+  { id:"s3", who:"Anjali, Block D", cat:"Electrical", text:"Streetlight flickering at the park entrance.", ago:"41 min ago", owner:"seed" },
+  { id:"s4", who:"Vikram, Block C", cat:"Water/Utility", text:"Continuous water leak on the side road.", ago:"1 hr ago", owner:"seed" },
+];
+
+/* ============ STATE (persisted across refresh) ============ */
+const state = (function loadState(){
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      s.imgBase64 = null; s.imgMime = null;
+      if(!Array.isArray(s.feed)) s.feed = DEFAULT_FEED.slice();
+      return s;
+    }
+  } catch(e){}
+  return {
+    points: 0,
+    you: { name: "You", points: 0 },
+    leaders: [
+      { name: "Priya S.", points: 140 },
+      { name: "Rahul M.", points: 90 },
+      { name: "Anjali K.", points: 60 },
+      { name: "Vikram D.", points: 30 },
+    ],
+    feed: DEFAULT_FEED.slice(),
+    imgBase64: null,
+    imgMime: null,
+  };
+})();
+
+function persist(){
+  try {
+    const { imgBase64, imgMime, ...rest } = state;
+    localStorage.setItem(STORE_KEY, JSON.stringify(rest));
+  } catch(e){}
+}
 
 /* ============ TABS ============ */
 document.querySelectorAll(".tab").forEach(t => {
