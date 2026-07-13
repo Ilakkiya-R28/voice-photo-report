@@ -441,7 +441,7 @@ function renderFeed(){
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
 document.getElementById("points").textContent = state.points;
-renderFeed(); renderLeaderboard();
+renderFeed(); renderLeaderboard(); renderAudit();
 
 /* ============ COMPLAINT CARD ============ */
 function severityClass(s){
