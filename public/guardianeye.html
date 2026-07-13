@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GuardianEye — See it. Say it. Solved.</title>
+<style>
+  :root{
+    --bg:#f2f7f4;
+    --ink:#0f2a2b;
+    --muted:#5b7576;
+    --card:#ffffff;
+    --line:#e2ecea;
+    --brand:#0e7c66;      /* calm green */
+    --brand-2:#2563a6;    /* civic blue */
+    --brand-soft:#e6f4ef;
+    --low:#16a34a;
+    --med:#eab308;
+    --high:#f97316;
+    --crit:#dc2626;
+    --shadow:0 4px 20px rgba(15,42,43,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--brand-2)}
+  header{
+    background:linear-gradient(120deg,var(--brand),var(--brand-2));
+    color:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18);
+    display:grid;place-items:center;font-size:22px;
+  }
+  .brand h1{font-size:20px;margin:0;letter-spacing:.2px}
+  .brand .tag{font-size:12px;opacity:.85;margin-top:2px}
+  .points{
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+    padding:8px 14px;border-radius:999px;font-weight:600;font-size:14px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .points .dot{width:8px;height:8px;background:#ffd166;border-radius:50%;box-shadow:0 0 10px #ffd166}
+  .points.bump{animation:bump .6s ease}
+  @keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.18)}100%{transform:scale(1)}}
+
+  main{max-width:1180px;margin:0 auto;padding:20px;display:grid;grid-template-columns:1fr 340px;gap:20px}
+  @media (max-width:900px){main{grid-template-columns:1fr;padding:14px}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+  .card h2{margin:0 0 12px;font-size:16px;letter-spacing:.2px}
+  .muted{color:var(--muted);font-size:13px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:14px;background:var(--brand-soft);padding:6px;border-radius:12px}
+  .tab{flex:1;text-align:center;padding:10px 8px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted)}
+  .tab.active{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+
+  .drop{
+    border:2px dashed #b7d5cc;border-radius:14px;padding:26px;text-align:center;cursor:pointer;
+    background:#fbfdfc;transition:background .2s,border-color .2s
+  }
+  .drop:hover,.drop.drag{background:var(--brand-soft);border-color:var(--brand)}
+  .drop input{display:none}
+  .drop .big{font-size:34px}
+  .preview{margin-top:12px;display:flex;gap:12px;align-items:center}
+  .preview img{max-width:120px;max-height:120px;border-radius:10px;border:1px solid var(--line)}
+  .btn{
+    background:var(--brand);color:#fff;border:0;padding:11px 16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn:hover{filter:brightness(1.05)}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .btn.ghost{background:#eef4f2;color:var(--ink)}
+  .btn.rec{background:var(--crit)}
+  .btn.rec.listening{animation:pulse 1.2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.6)}70%{box-shadow:0 0 0 12px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}
+
+  select,textarea,input[type=text]{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--ink);
+  }
+  textarea{min-height:90px;resize:vertical}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .row > *{flex:1}
+  .row .shrink{flex:0}
+
+  .transcript{margin-top:12px;background:#f7fbfa;border:1px dashed var(--line);border-radius:10px;padding:10px;font-size:14px;min-height:38px}
+
+  .complaint{margin-top:14px;border-radius:14px;padding:16px;background:linear-gradient(180deg,#fff,#f7fbfa);border:1px solid var(--line);animation:fade .5s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .complaint .head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .badge{padding:4px 10px;border-radius:999px;color:#fff;font-size:12px;font-weight:700;letter-spacing:.3px}
+  .b-low{background:var(--low)}.b-med{background:var(--med);color:#3a2d00}.b-high{background:var(--high)}.b-crit{background:var(--crit)}
+  .category{background:#e6eef7;color:var(--brand-2);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+  .draft{margin-top:10px;line-height:1.55;font-size:14.5px}
+  .plus10{display:inline-block;margin-top:10px;background:#fff4c2;color:#7a5c00;padding:6px 10px;border-radius:999px;font-weight:700;animation:pop .8s ease}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.1);opacity:1}100%{transform:scale(1)}}
+
+  .feed{max-height:360px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}
+  .feed .item{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;animation:fade .5s}
+  .feed .item .top{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .feed .item .cat{font-weight:700;color:var(--brand)}
+  .side{display:flex;flex-direction:column;gap:16px}
+  .alert{border-left:4px solid var(--high);background:#fff8f1;padding:10px 12px;border-radius:8px;margin-bottom:8px;font-size:13.5px}
+  .alert.blue{border-color:var(--brand-2);background:#eef5fb}
+  .alert.green{border-color:var(--brand);background:#eef7f3}
+  .alert.red{border-color:var(--crit);background:#fdecec}
+  .disclaimer{font-size:11.5px;color:var(--muted);margin-top:6px;font-style:italic}
+  .leaders{display:flex;flex-direction:column;gap:6px}
+  .lb{display:flex;justify-content:space-between;padding:8px 10px;border-radius:8px;background:#f7fbfa;border:1px solid var(--line);font-size:14px}
+  .lb.you{background:var(--brand-soft);border-color:var(--brand);font-weight:700}
+  .rank{display:inline-block;width:22px;color:var(--muted);font-weight:700}
+  .err{background:#fdecec;color:#7a1616;border:1px solid #f5c6c6;padding:10px;border-radius:10px;margin-top:10px;font-size:14px}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:18px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">👁️</div>
+    <div>
+      <h1>GuardianEye</h1>
+      <div class="tag">See it. Say it. Solved.</div>
+    </div>
+  </div>
+  <div class="points" id="pointsBadge">
+    <span class="dot"></span>
+    <span><span id="points">0</span> Community Points</span>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="card">
+      <h2>Report an issue</h2>
+      <div class="tabs" role="tablist">
+        <div class="tab active" data-tab="photo">📷 Report by Photo</div>
+        <div class="tab" data-tab="voice">🎙️ Report by Voice</div>
+        <div class="tab" data-tab="text">✍️ Report by Text</div>
+      </div>
+
+      <!-- PHOTO -->
+      <div class="pane" id="pane-photo">
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="image/*" />
+          <div class="big">📸</div>
+          <div><strong>Tap to take a photo</strong> or drop an image here</div>
+          <div class="muted" style="margin-top:6px">Broken streetlight? Overflowing bin? Pothole? Just snap it.</div>
+        </label>
+        <div class="preview" id="preview" style="display:none">
+          <img id="previewImg" alt="preview"/>
+          <div style="flex:1">
+            <div class="muted" id="fileName"></div>
+            <button class="btn" id="analyzeBtn">Analyze & Report <span id="photoSpin"></span></button>
+          </div>
+        </div>
+        <div id="photoErr"></div>
+        <div id="photoResult"></div>
+      </div>
+
+      <!-- VOICE -->
+      <div class="pane" id="pane-voice" style="display:none">
+        <div class="row">
+          <div class="shrink" style="min-width:170px">
+            <label class="muted" style="font-size:12px">Speak in</label>
+            <select id="lang">
+              <option value="en-IN">English</option>
+              <option value="hi-IN">हिन्दी (Hindi)</option>
+              <option value="ta-IN">தமிழ் (Tamil)</option>
+            </select>
+          </div>
+          <div style="text-align:right">
+            <button class="btn rec" id="recBtn">🎙️ Start speaking</button>
+          </div>
+        </div>
+        <div class="transcript" id="transcript"><span class="muted">Your words will appear here…</span></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="voiceSubmit" disabled>Submit voice report <span id="voiceSpin"></span></button>
+        </div>
+        <div id="voiceErr"></div>
+        <div id="voiceResult"></div>
+        <div class="hint">Tip: Voice works best in Chrome / Edge. Elderly & low-literacy users can speak in their language.</div>
+      </div>
+
+      <!-- TEXT -->
+      <div class="pane" id="pane-text" style="display:none">
+        <textarea id="textInput" placeholder="Describe the issue in a few words. Example: There's a big pothole near the school gate and a child almost fell yesterday."></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="textSubmit">Submit report <span id="textSpin"></span></button>
+        </div>
+        <div id="textErr"></div>
+        <div id="textResult"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <h2>🌆 Live Local Feed</h2>
+      <div class="muted" style="margin-bottom:10px">Recent reports around your neighborhood</div>
+      <div class="feed" id="feed"></div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="card">
+      <h2>📡 Nearby Alerts</h2>
+      <div id="alerts">
+        <div class="alert red"><strong>⚠️ Road digging</strong> reported 3 buildings away<div class="muted">180m • 10 min ago</div></div>
+        <div class="alert blue"><strong>💧 Water leak</strong> reported by your neighbor<div class="muted">60m • 5 min ago</div></div>
+        <div class="alert"><strong>🗑️ Overflowing bin</strong> at the community park<div class="muted">240m • 22 min ago</div></div>
+        <div class="alert green"><strong>🐕 Stray pack sighted</strong> near Block C gate<div class="muted">310m • 34 min ago</div></div>
+      </div>
+      <div class="disclaimer">Simulated for demo — powered by real GPS geofencing in production.</div>
+    </div>
+
+    <div class="card">
+      <h2>🏆 Leaderboard</h2>
+      <div class="leaders" id="leaderboard"></div>
+      <div class="disclaimer">Earn points for every verified report you file.</div>
+    </div>
+  </aside>
+</main>
+
+<footer>Built for Open Innovation • GuardianEye demo</footer>
+
+<script>
+/* ============ STATE ============ */
+const state = {
+  points: 0,
+  you: { name: "You", points: 0 },
+  leaders: [
+    { name: "Priya S.", points: 140 },
+    { name: "Rahul M.", points: 90 },
+    { name: "Anjali K.", points: 60 },
+    { name: "Vikram D.", points: 30 },
+  ],
+  feed: [
+    { who:"Priya, Block B", cat:"Sanitation", text:"Garbage not cleared for 2 days near main gate.", ago:"12 min ago" },
+    { who:"Rahul, Block A", cat:"Road/Infrastructure", text:"Large pothole opened up after last night's rain.", ago:"28 min ago" },
+    { who:"Anjali, Block D", cat:"Electrical", text:"Streetlight flickering at the park entrance.", ago:"41 min ago" },
+    { who:"Vikram, Block C", cat:"Water/Utility", text:"Continuous water leak on the side road.", ago:"1 hr ago" },
+  ],
+  imgBase64: null,
+  imgMime: null,
+};
+
+/* ============ TABS ============ */
+document.querySelectorAll(".tab").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    const tab = t.dataset.tab;
+    ["photo","voice","text"].forEach(k => {
+      document.getElementById("pane-"+k).style.display = (k===tab?"block":"none");
+    });
+  });
+});
+
+/* ============ POINTS + LEADERBOARD + FEED ============ */
+function addPoints(n){
+  state.points += n;
+  state.you.points += n;
+  document.getElementById("points").textContent = state.points;
+  const b = document.getElementById("pointsBadge");
+  b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump");
+  renderLeaderboard();
+}
+function renderLeaderboard(){
+  const all = [...state.leaders, state.you].sort((a,b)=>b.points-a.points);
+  const el = document.getElementById("leaderboard");
+  el.innerHTML = all.map((p,i)=>`
+    <div class="lb ${p===state.you?'you':''}">
+      <span><span class="rank">#${i+1}</span> ${p.name}${p===state.you?' (you)':''}</span>
+      <span>${p.points} pts</span>
+    </div>`).join("");
+}
+function addToFeed(item){
+  state.feed.unshift(item);
+  renderFeed();
+}
+function renderFeed(){
+  const el = document.getElementById("feed");
+  el.innerHTML = state.feed.map(f=>`
+    <div class="item">
+      <div class="top"><span>${f.who}</span><span>${f.ago}</span></div>
+      <div><span class="cat">${f.cat}</span></div>
+      <div style="margin-top:4px;font-size:14px">${escapeHtml(f.text)}</div>
+    </div>`).join("");
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+renderFeed(); renderLeaderboard();
+
+/* ============ COMPLAINT CARD ============ */
+function severityClass(s){
+  s=(s||"").toLowerCase();
+  if(s.startsWith("crit")) return "b-crit";
+  if(s.startsWith("high")) return "b-high";
+  if(s.startsWith("med")) return "b-med";
+  return "b-low";
+}
+function renderComplaint(target, data, extra){
+  const cat = data.category || "Other";
+  const sev = data.severity || "Low";
+  const draft = data.draft || "";
+  target.innerHTML = `
+    <div class="complaint">
+      <div class="head">
+        <div>
+          <span class="category">${escapeHtml(cat)}</span>
+          <span class="badge ${severityClass(sev)}" style="margin-left:6px">${escapeHtml(sev)}</span>
+        </div>
+        <span class="plus10">+10 Community Points 🎉</span>
+      </div>
+      ${extra ? `<div class="muted" style="margin-top:8px">${extra}</div>`:''}
+      <div class="draft">${escapeHtml(draft)}</div>
+    </div>`;
+  addPoints(10);
+  addToFeed({ who:"You, Your Block", cat:cat, text:draft.length>140?draft.slice(0,140)+"…":draft, ago:"just now" });
+}
+
+/* ============ ANTHROPIC CALL ============ */
+async function callClaude(messages, systemPrompt){
+  const body = {
+    model: "claude-sonnet-4-6",
+    max_tokens: 1000,
+    system: systemPrompt,
+    messages,
+  };
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "anthropic-dangerous-direct-browser-access":"true",
+      "anthropic-version":"2023-06-01"
+    },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const t = await res.text().catch(()=> "");
+    throw new Error("API error "+res.status+": "+t.slice(0,200));
+  }
+  const j = await res.json();
+  const text = (j.content||[]).map(c=>c.text||"").join("").trim();
+  return extractJson(text);
+}
+function extractJson(text){
+  // find first { ... } block
+  const m = text.match(/\{[\s\S]*\}/);
+  if(!m) throw new Error("No JSON in AI response");
+  // allow single quotes fallback
+  let s = m[0];
+  try { return JSON.parse(s); }
+  catch(e){
+    s = s.replace(/'/g,'"');
+    return JSON.parse(s);
+  }
+}
+
+/* ============ PHOTO MODE ============ */
+const drop = document.getElementById("drop");
+const fileInput = document.getElementById("file");
+drop.addEventListener("click", ()=>fileInput.click());
+["dragover","dragenter"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("drag")}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("drag")}));
+drop.addEventListener("drop", ev=>{
+  const f = ev.dataTransfer.files?.[0]; if(f) handleFile(f);
+});
+fileInput.addEventListener("change", e=>{ const f=e.target.files?.[0]; if(f) handleFile(f); });
+
+function handleFile(f){
+  if(!f.type.startsWith("image/")){ showErr("photoErr","Please choose an image file."); return; }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const dataUrl = reader.result;
+    state.imgBase64 = dataUrl.split(",")[1];
+    state.imgMime = f.type;
+    document.getElementById("previewImg").src = dataUrl;
+    document.getElementById("fileName").textContent = f.name + " • " + Math.round(f.size/1024) + " KB";
+    document.getElementById("preview").style.display = "flex";
+    document.getElementById("photoErr").innerHTML = "";
+    document.getElementById("photoResult").innerHTML = "";
+  };
+  reader.readAsDataURL(f);
+}
+
+document.getElementById("analyzeBtn").addEventListener("click", async ()=>{
+  if(!state.imgBase64){ showErr("photoErr","Please choose an image first."); return; }
+  const btn = document.getElementById("analyzeBtn");
+  const spin = document.getElementById("photoSpin");
+  btn.disabled = true; spin.innerHTML = '<span class="spinner"></span>';
+  document.getElementById("photoErr").innerHTML = "";
+  try {
+    const systemPrompt = `You are GuardianEye, a civic issue analyzer. Given a photo of a local problem, identify:
+1. Category (Sanitation, Road/Infrastructure, Water/Utility, Public Safety, Animal Welfare, Electrical, Other)
+2. Severity (Low, Medium, High, Critical) based on visible risk to public safety or health
+3. A professional, official-sounding complaint draft (2-3 sentences) describing what is visible, suitable for submission to a municipal authority
+Respond ONLY in this JSON format:
+{"category": "...", "severity": "...", "draft": "..."}
+If the image does not show a clear civic issue, say so honestly in the draft and use category "Other" and severity "Low" instead of forcing a category.`;
+    const data = await callClaude([{
+      role:"user",
+      content:[
+        { type:"image", source:{ type:"base64", media_type: state.imgMime, data: state.imgBase64 } },
+        { type:"text", text:"Analyze this photo and reply with the JSON only." }
+      ]
+    }], systemPrompt);
+    renderComplaint(document.getElementById("photoResult"), data);
+  } catch(e){
+    showErr("photoErr", friendlyErr(e));
+  } finally {
+    btn.disabled = false; spin.innerHTML = "";
+  }
+});
+
+/* ============ VOICE MODE ============ */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recBtn = document.getElementById("recBtn");
+const transcriptEl = document.getElementById("transcript");
+const voiceSubmit = document.getElementById("voiceSubmit");
+let recognizer = null, listening = false, transcript = "";
+
+if(!SR){
+  recBtn.disabled = true;
+  recBtn.textContent = "🎙️ Voice not supported";
+  transcriptEl.innerHTML = '<span class="muted">Your browser doesn\'t support the Web Speech API. Please use Chrome or Edge, or use the Text tab.</span>';
+}
+
+recBtn.addEventListener("click", ()=>{
+  if(!SR) return;
+  if(listening){ recognizer.stop(); return; }
+  transcript = "";
+  transcriptEl.innerHTML = '<span class="muted">Listening…</span>';
+  recognizer = new SR();
+  recognizer.lang = document.getElementById("lang").value;
+  recognizer.interimResults = true;
+  recognizer.continuous = false;
+  recognizer.onresult = (ev)=>{
+    let interim = "", finalT = "";
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const r = ev.results[i];
+      if(r.isFinal) finalT += r[0].transcript; else interim += r[0].transcript;
+    }
+    if(finalT) transcript += finalT;
+    transcriptEl.textContent = (transcript + " " + interim).trim() || "…";
+  };
+  recognizer.onerror = (e)=>{ showErr("voiceErr","Voice error: "+e.error); };
+  recognizer.onend = ()=>{
+    listening = false;
+    recBtn.classList.remove("listening");
+    recBtn.textContent = "🎙️ Start speaking";
+    if(transcript.trim()){
+      voiceSubmit.disabled = false;
+      transcriptEl.textContent = transcript.trim();
+    } else {
+      transcriptEl.innerHTML = '<span class="muted">Didn\'t catch anything. Try again?</span>';
+    }
+  };
+  recognizer.start();
+  listening = true;
+  recBtn.classList.add("listening");
+  recBtn.textContent = "⏹️ Stop";
+});
+
+voiceSubmit.addEventListener("click", ()=>submitTextual(transcript, "voice"));
+document.getElementById("textSubmit").addEventListener("click", ()=>{
+  const t = document.getElementById("textInput").value.trim();
+  if(!t){ showErr("textErr","Please describe the issue first."); return; }
+  submitTextual(t, "text");
+});
+
+async function submitTextual(text, mode){
+  const errId = mode==="voice"?"voiceErr":"textErr";
+  const spinId = mode==="voice"?"voiceSpin":"textSpin";
+  const resultId = mode==="voice"?"voiceResult":"textResult";
+  const btn = mode==="voice"?voiceSubmit:document.getElementById("textSubmit");
+  document.getElementById(errId).innerHTML = "";
+  btn.disabled = true;
+  document.getElementById(spinId).innerHTML = '<span class="spinner"></span>';
+  try {
+    const langCode = mode==="voice" ? document.getElementById("lang").value : "en-IN";
+    const wantVoice = mode==="voice";
+    const systemPrompt = `You are GuardianEye. Given a spoken or written complaint transcript (possibly informal, short, or in another language), identify:
+1. Category (Sanitation, Road/Infrastructure, Water/Utility, Public Safety, Animal Welfare, Electrical, Other)
+2. Severity (Low, Medium, High, Critical)
+3. A professional, official-sounding complaint draft (2-3 sentences) suitable for submission to a municipal authority, written in English.
+${wantVoice ? `4. A short (max 2 sentence) warm, reassuring 'voice_reply' in the SAME LANGUAGE as the user's input (language hint: ${langCode}), confirming their issue was logged and will be addressed.` : ""}
+Respond ONLY in JSON:
+${wantVoice
+  ? `{"category":"...","severity":"...","draft":"...","voice_reply":"..."}`
+  : `{"category":"...","severity":"...","draft":"..."}`}`;
+    const data = await callClaude(
+      [{ role:"user", content: text }],
+      systemPrompt
+    );
+    const extra = mode==="voice" ? `You said: "${escapeHtml(text)}"` : null;
+    renderComplaint(document.getElementById(resultId), data, extra);
+    if(wantVoice && data.voice_reply){
+      speak(data.voice_reply, langCode);
+    }
+  } catch(e){
+    showErr(errId, friendlyErr(e));
+  } finally {
+    btn.disabled = false;
+    document.getElementById(spinId).innerHTML = "";
+  }
+}
+
+function speak(text, lang){
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang || "en-IN";
+    u.rate = 1; u.pitch = 1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  } catch(e){}
+}
+
+/* ============ HELPERS ============ */
+function showErr(id,msg){
+  document.getElementById(id).innerHTML = `<div class="err">${escapeHtml(msg)} <br><span class="muted">Please try again.</span></div>`;
+}
+function friendlyErr(e){
+  const m = (e && e.message) || String(e);
+  if(m.includes("Failed to fetch")) return "Couldn't reach the AI service. Check your connection and try again.";
+  if(m.includes("401") || m.includes("403")) return "The AI service rejected the request. Please try again.";
+  return "Something went wrong: " + m;
+}
+</script>
+</body>
+</html>
