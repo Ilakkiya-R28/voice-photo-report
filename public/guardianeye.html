@@ -342,24 +342,86 @@ function addToFeed(item){
   renderFeed();
   persist();
 }
+/* ============ DELETE + AUDIT TRAIL ============ */
+let pendingDeleteId = null;
 function deleteReport(id){
-  const idx = state.feed.findIndex(f=>f.id===id);
-  if(idx<0) return;
-  if(state.feed[idx].owner !== USER_ID){
+  const r = state.feed.find(f=>f.id===id);
+  if(!r) return;
+  if(r.owner !== USER_ID){
     alert("Only the person who filed this report can delete it.");
     return;
   }
-  if(!confirm("Delete your report? This cannot be undone.")) return;
+  pendingDeleteId = id;
+  document.getElementById("delSummary").innerHTML =
+    `<strong>${escapeHtml(r.cat)}</strong> — ${escapeHtml(r.text)}`;
+  document.getElementById("delReason").value = "";
+  document.getElementById("delModal").classList.add("open");
+  setTimeout(()=>document.getElementById("delReason").focus(), 50);
+}
+window.deleteReport = deleteReport;
+
+function closeDeleteModal(){
+  pendingDeleteId = null;
+  document.getElementById("delModal").classList.remove("open");
+}
+function confirmDelete(){
+  const reason = document.getElementById("delReason").value.trim();
+  if(!reason){
+    alert("Please enter a reason so it can be recorded in the audit trail.");
+    return;
+  }
+  const idx = state.feed.findIndex(f=>f.id===pendingDeleteId);
+  if(idx<0){ closeDeleteModal(); return; }
+  const r = state.feed[idx];
+  const now = new Date();
+  state.audit.unshift({
+    id: "a_" + now.getTime().toString(36),
+    reportId: r.id,
+    category: r.cat,
+    text: r.text,
+    reason,
+    ts: now.toISOString(),
+    by: USER_ID,
+  });
   state.feed.splice(idx,1);
-  // refund the points for the deleted report
   state.points = Math.max(0, state.points - 10);
   state.you.points = Math.max(0, state.you.points - 10);
   document.getElementById("points").textContent = state.points;
   renderLeaderboard();
   renderFeed();
+  renderAudit();
   persist();
+  closeDeleteModal();
 }
-window.deleteReport = deleteReport;
+document.getElementById("delCancel").addEventListener("click", closeDeleteModal);
+document.getElementById("delConfirm").addEventListener("click", confirmDelete);
+document.getElementById("delModal").addEventListener("click", (e)=>{
+  if(e.target.id === "delModal") closeDeleteModal();
+});
+
+function fmtTs(iso){
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined,{ dateStyle:"medium", timeStyle:"short" });
+  } catch(e){ return iso; }
+}
+function renderAudit(){
+  const el = document.getElementById("auditLog");
+  if(!el) return;
+  if(!state.audit || !state.audit.length){
+    el.innerHTML = '<div class="audit"><div class="empty">No deletions yet. Reports you delete will be logged here.</div></div>';
+    return;
+  }
+  el.innerHTML = '<div class="audit">' + state.audit.map(a=>`
+    <div class="a">
+      <div class="meta">
+        <span>🗑️ ${escapeHtml(a.category)}</span>
+        <span>${escapeHtml(fmtTs(a.ts))}</span>
+      </div>
+      <div>${escapeHtml(a.text)}</div>
+      <div class="reason">Reason: ${escapeHtml(a.reason)}</div>
+    </div>`).join("") + '</div>';
+}
 function renderFeed(){
   const el = document.getElementById("feed");
   el.innerHTML = state.feed.map(f=>{
