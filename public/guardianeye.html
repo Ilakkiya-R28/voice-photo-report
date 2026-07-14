@@ -118,6 +118,39 @@
   .audit .a .reason{margin-top:4px;font-style:italic;color:#5a1a1a}
   .audit .empty{color:var(--muted);font-size:13px;font-style:italic}
 
+  /* Works Done showcase */
+  .works{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .work{
+    position:relative;border-radius:14px;padding:14px;overflow:hidden;
+    background:linear-gradient(135deg,#eaf7f1,#e6eef7);
+    border:1px solid #cfe7dd;box-shadow:0 6px 20px rgba(14,124,102,.10);
+    animation:fade .5s ease;
+  }
+  .work::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle at top right, rgba(255,209,102,.35), transparent 60%);
+  }
+  .work .ribbon{
+    position:absolute;top:12px;right:-34px;transform:rotate(35deg);
+    background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;
+    font-size:10px;font-weight:800;letter-spacing:.5px;padding:3px 38px;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);
+  }
+  .work .wcat{display:inline-block;background:#fff;color:var(--brand);font-weight:700;font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid #cfe7dd}
+  .work .wtext{margin-top:8px;font-size:14px;line-height:1.45;position:relative}
+  .work .wmeta{margin-top:10px;display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);position:relative}
+  .work .wglow{
+    display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+    background:#fff4c2;color:#7a5c00;padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px;
+    position:relative;
+  }
+  .works-empty{color:var(--muted);font-size:13px;font-style:italic;text-align:center;padding:14px}
+  .work-stats{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .stat{flex:1;min-width:90px;background:var(--brand-soft);border:1px solid #cfe7dd;border-radius:10px;padding:8px 10px;text-align:center}
+  .stat .n{font-size:20px;font-weight:800;color:var(--brand)}
+  .stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .btn.resolve{background:var(--low)}
+
   /* Modal */
   .modal-bg{position:fixed;inset:0;background:rgba(15,42,43,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
   .modal-bg.open{display:flex}
