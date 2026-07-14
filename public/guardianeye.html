@@ -118,6 +118,39 @@
   .audit .a .reason{margin-top:4px;font-style:italic;color:#5a1a1a}
   .audit .empty{color:var(--muted);font-size:13px;font-style:italic}
 
+  /* Works Done showcase */
+  .works{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .work{
+    position:relative;border-radius:14px;padding:14px;overflow:hidden;
+    background:linear-gradient(135deg,#eaf7f1,#e6eef7);
+    border:1px solid #cfe7dd;box-shadow:0 6px 20px rgba(14,124,102,.10);
+    animation:fade .5s ease;
+  }
+  .work::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle at top right, rgba(255,209,102,.35), transparent 60%);
+  }
+  .work .ribbon{
+    position:absolute;top:12px;right:-34px;transform:rotate(35deg);
+    background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;
+    font-size:10px;font-weight:800;letter-spacing:.5px;padding:3px 38px;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);
+  }
+  .work .wcat{display:inline-block;background:#fff;color:var(--brand);font-weight:700;font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid #cfe7dd}
+  .work .wtext{margin-top:8px;font-size:14px;line-height:1.45;position:relative}
+  .work .wmeta{margin-top:10px;display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);position:relative}
+  .work .wglow{
+    display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+    background:#fff4c2;color:#7a5c00;padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px;
+    position:relative;
+  }
+  .works-empty{color:var(--muted);font-size:13px;font-style:italic;text-align:center;padding:14px}
+  .work-stats{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .stat{flex:1;min-width:90px;background:var(--brand-soft);border:1px solid #cfe7dd;border-radius:10px;padding:8px 10px;text-align:center}
+  .stat .n{font-size:20px;font-weight:800;color:var(--brand)}
+  .stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .btn.resolve{background:var(--low)}
+
   /* Modal */
   .modal-bg{position:fixed;inset:0;background:rgba(15,42,43,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
   .modal-bg.open{display:flex}
@@ -214,6 +247,13 @@
       <div class="muted" style="margin-bottom:10px">Recent reports around your neighborhood</div>
       <div class="feed" id="feed"></div>
     </div>
+
+    <div class="card" style="margin-top:20px">
+      <h2>✨ Works Done — Your Impact</h2>
+      <div class="muted" style="margin-bottom:10px">Complaints you've resolved. Every fix makes the neighborhood better.</div>
+      <div class="work-stats" id="workStats"></div>
+      <div id="worksDone"></div>
+    </div>
   </section>
 
   <aside class="side">
@@ -280,6 +320,7 @@ const state = (function loadState(){
       s.imgBase64 = null; s.imgMime = null;
       if(!Array.isArray(s.feed)) s.feed = DEFAULT_FEED.slice();
       if(!Array.isArray(s.audit)) s.audit = [];
+      if(!Array.isArray(s.works)) s.works = [];
       return s;
     }
   } catch(e){}
@@ -294,6 +335,7 @@ const state = (function loadState(){
     ],
     feed: DEFAULT_FEED.slice(),
     audit: [],
+    works: [],
     imgBase64: null,
     imgMime: null,
   };
@@ -435,14 +477,71 @@ function renderFeed(){
       </div>
       <div><span class="cat">${escapeHtml(f.cat)}</span></div>
       <div style="margin-top:4px;font-size:14px">${escapeHtml(f.text)}</div>
-      ${mine?`<div style="margin-top:8px;text-align:right"><button class="btn ghost" style="padding:6px 10px;font-size:12px" onclick="deleteReport('${f.id}')">🗑️ Delete my report</button></div>`:''}
+      ${mine?`<div style="margin-top:8px;text-align:right;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn resolve" style="padding:6px 10px;font-size:12px" onclick="resolveReport('${f.id}')">✅ Mark resolved</button>
+        <button class="btn ghost" style="padding:6px 10px;font-size:12px" onclick="deleteReport('${f.id}')">🗑️ Delete my report</button>
+      </div>`:''}
     </div>`;
   }).join("");
 }
+
+/* ============ WORKS DONE ============ */
+function resolveReport(id){
+  const idx = state.feed.findIndex(f=>f.id===id);
+  if(idx<0) return;
+  const r = state.feed[idx];
+  if(r.owner !== USER_ID){ alert("Only the person who filed this report can mark it resolved."); return; }
+  const note = prompt("How was it resolved? (Short note — shown on your Works Done)","Fixed by local authority");
+  if(note===null) return;
+  const now = new Date();
+  state.works.unshift({
+    id: "w_" + now.getTime().toString(36),
+    reportId: r.id,
+    cat: r.cat,
+    text: r.text,
+    note: (note||"").trim() || "Marked resolved",
+    ts: now.toISOString(),
+    by: USER_ID,
+  });
+  state.feed.splice(idx,1);
+  // bonus points for resolving
+  addPoints(15);
+  renderFeed();
+  renderWorks();
+  persist();
+}
+window.resolveReport = resolveReport;
+
+function renderWorks(){
+  const el = document.getElementById("worksDone");
+  const stats = document.getElementById("workStats");
+  const mine = (state.works||[]).filter(w=>w.by===USER_ID);
+  const byCat = {};
+  mine.forEach(w=>{ byCat[w.cat]=(byCat[w.cat]||0)+1; });
+  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+  stats.innerHTML = `
+    <div class="stat"><div class="n">${mine.length}</div><div class="l">Resolved</div></div>
+    <div class="stat"><div class="n">${mine.length*15}</div><div class="l">Bonus pts</div></div>
+    <div class="stat"><div class="n">${topCat?escapeHtml(topCat[0].split('/')[0]):'—'}</div><div class="l">Top area</div></div>
+  `;
+  if(!mine.length){
+    el.innerHTML = '<div class="works-empty">No works completed yet. Mark a report as resolved to showcase your impact here. ✨</div>';
+    return;
+  }
+  el.innerHTML = '<div class="works">' + mine.map(w=>`
+    <div class="work">
+      <div class="ribbon">RESOLVED</div>
+      <span class="wcat">${escapeHtml(w.cat)}</span>
+      <div class="wtext">${escapeHtml(w.text)}</div>
+      <div class="wglow">✨ ${escapeHtml(w.note)}</div>
+      <div class="wmeta"><span>✅ ${escapeHtml(fmtTs(w.ts))}</span><span>+15 pts</span></div>
+    </div>`).join("") + '</div>';
+}
+
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
 document.getElementById("points").textContent = state.points;
-renderFeed(); renderLeaderboard(); renderAudit();
+renderFeed(); renderLeaderboard(); renderAudit(); renderWorks();
 
 /* ============ COMPLAINT CARD ============ */
 function severityClass(s){
