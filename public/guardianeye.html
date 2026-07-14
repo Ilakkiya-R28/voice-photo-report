@@ -232,6 +232,7 @@
       <h2>🏆 Leaderboard</h2>
       <div class="leaders" id="leaderboard"></div>
       <div class="disclaimer">Earn points for every verified report you file.</div>
+    </div>
     <div class="card">
       <h2>🧾 Deletion Audit Trail</h2>
       <div class="muted" style="margin-bottom:8px">Every complaint you delete is logged here for accountability.</div>
@@ -502,37 +503,73 @@ function sniffMime(b64){
     if(b[0]===0xFF && b[1]===0xD8 && b[2]===0xFF) return "image/jpeg";
     if(b[0]===0x89 && b[1]===0x50 && b[2]===0x4E && b[3]===0x47) return "image/png";
     if(b[0]===0x47 && b[1]===0x49 && b[2]===0x46) return "image/gif";
-    if(b[0]===0x52 && b[1]===0x49 && b[2]===0x46 && b[2]!==undefined && String.fromCharCode(b[8],b[9],b[10],b[11])==="WEBP") return "image/webp";
+    if(b[0]===0x52 && b[1]===0x49 && b[2]===0x46 && b[11]!==undefined && String.fromCharCode(b[8],b[9],b[10],b[11])==="WEBP") return "image/webp";
     if(b[4]===0x66 && b[5]===0x74 && b[6]===0x79 && b[7]===0x70) return "image/heic"; // ftyp box → HEIC/HEIF
     return null;
   }catch(_){ return null; }
 }
 
-function handleFile(f){
+function readFileDataUrl(f){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>resolve(String(reader.result || ""));
+    reader.onerror = ()=>reject(new Error("Could not read this image. Please try another photo."));
+    reader.readAsDataURL(f);
+  });
+}
+
+function loadPreviewImage(src){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    img.onload = ()=>resolve(img);
+    img.onerror = ()=>reject(new Error("This image could not be opened by the browser. Please use a JPEG, PNG, GIF, or WEBP file."));
+    img.src = src;
+  });
+}
+
+async function normalizeForAi(dataUrl){
+  const img = await loadPreviewImage(dataUrl);
+  const maxSide = 1280;
+  const sourceW = img.naturalWidth || img.width;
+  const sourceH = img.naturalHeight || img.height;
+  const scale = Math.min(1, maxSide / Math.max(sourceW, sourceH));
+  const w = Math.max(1, Math.round(sourceW * scale));
+  const h = Math.max(1, Math.round(sourceH * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0,0,w,h);
+  ctx.drawImage(img,0,0,w,h);
+  const normalized = canvas.toDataURL("image/jpeg", 0.9);
+  return { mime:"image/jpeg", base64: normalized.split(",")[1] };
+}
+
+async function handleFile(f){
   if(!f.type.startsWith("image/")){ showErr("photoErr","Please choose an image file."); return; }
-  const reader = new FileReader();
-  reader.onload = ()=>{
-    const dataUrl = reader.result;
-    const b64 = dataUrl.split(",")[1];
+  try{
+    document.getElementById("photoErr").innerHTML = "";
+    document.getElementById("photoResult").innerHTML = "";
+    const dataUrl = await readFileDataUrl(f);
+    const b64 = dataUrl.split(",")[1] || "";
     const sniffed = sniffMime(b64);
     const allowed = ["image/png","image/jpeg","image/gif","image/webp"];
     if(!sniffed || !allowed.includes(sniffed)){
-      showErr("photoErr", sniffed === "image/heic"
+      throw new Error(sniffed === "image/heic"
         ? "HEIC images aren't supported. Please convert to JPEG or PNG and try again."
         : "Unsupported image format. Please use a JPEG, PNG, GIF, or WEBP file.");
-      state.imgBase64 = null; state.imgMime = null;
-      document.getElementById("preview").style.display = "none";
-      return;
     }
-    state.imgBase64 = b64;
-    state.imgMime = sniffed;
+    const normalized = await normalizeForAi(dataUrl);
+    state.imgBase64 = normalized.base64;
+    state.imgMime = normalized.mime;
     document.getElementById("previewImg").src = dataUrl;
     document.getElementById("fileName").textContent = f.name + " • " + Math.round(f.size/1024) + " KB";
     document.getElementById("preview").style.display = "flex";
-    document.getElementById("photoErr").innerHTML = "";
-    document.getElementById("photoResult").innerHTML = "";
-  };
-  reader.readAsDataURL(f);
+  }catch(e){
+    state.imgBase64 = null; state.imgMime = null;
+    document.getElementById("preview").style.display = "none";
+    showErr("photoErr", (e && e.message) || "Unsupported image format. Please use a JPEG, PNG, GIF, or WEBP file.");
+  }
 }
 
 
@@ -657,6 +694,7 @@ function friendlyErr(e){
   if(m.includes("402")) return "AI credits are exhausted for this workspace. Please add credits and try again.";
   if(m.includes("429")) return "The AI service is busy right now. Please retry in a moment.";
   if(m.includes("401") || m.includes("403")) return "The AI service rejected the request. Please try again.";
+  if(m.toLowerCase().includes("invalid_image_format") || m.toLowerCase().includes("unsupported image")) return "That photo could not be read by the AI. Please reselect it; GuardianEye will convert it to a compatible JPEG before analyzing.";
   return "Something went wrong: " + m;
 }
 </script>
