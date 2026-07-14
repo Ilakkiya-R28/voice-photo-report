@@ -477,14 +477,71 @@ function renderFeed(){
       </div>
       <div><span class="cat">${escapeHtml(f.cat)}</span></div>
       <div style="margin-top:4px;font-size:14px">${escapeHtml(f.text)}</div>
-      ${mine?`<div style="margin-top:8px;text-align:right"><button class="btn ghost" style="padding:6px 10px;font-size:12px" onclick="deleteReport('${f.id}')">🗑️ Delete my report</button></div>`:''}
+      ${mine?`<div style="margin-top:8px;text-align:right;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn resolve" style="padding:6px 10px;font-size:12px" onclick="resolveReport('${f.id}')">✅ Mark resolved</button>
+        <button class="btn ghost" style="padding:6px 10px;font-size:12px" onclick="deleteReport('${f.id}')">🗑️ Delete my report</button>
+      </div>`:''}
     </div>`;
   }).join("");
 }
+
+/* ============ WORKS DONE ============ */
+function resolveReport(id){
+  const idx = state.feed.findIndex(f=>f.id===id);
+  if(idx<0) return;
+  const r = state.feed[idx];
+  if(r.owner !== USER_ID){ alert("Only the person who filed this report can mark it resolved."); return; }
+  const note = prompt("How was it resolved? (Short note — shown on your Works Done)","Fixed by local authority");
+  if(note===null) return;
+  const now = new Date();
+  state.works.unshift({
+    id: "w_" + now.getTime().toString(36),
+    reportId: r.id,
+    cat: r.cat,
+    text: r.text,
+    note: (note||"").trim() || "Marked resolved",
+    ts: now.toISOString(),
+    by: USER_ID,
+  });
+  state.feed.splice(idx,1);
+  // bonus points for resolving
+  addPoints(15);
+  renderFeed();
+  renderWorks();
+  persist();
+}
+window.resolveReport = resolveReport;
+
+function renderWorks(){
+  const el = document.getElementById("worksDone");
+  const stats = document.getElementById("workStats");
+  const mine = (state.works||[]).filter(w=>w.by===USER_ID);
+  const byCat = {};
+  mine.forEach(w=>{ byCat[w.cat]=(byCat[w.cat]||0)+1; });
+  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+  stats.innerHTML = `
+    <div class="stat"><div class="n">${mine.length}</div><div class="l">Resolved</div></div>
+    <div class="stat"><div class="n">${mine.length*15}</div><div class="l">Bonus pts</div></div>
+    <div class="stat"><div class="n">${topCat?escapeHtml(topCat[0].split('/')[0]):'—'}</div><div class="l">Top area</div></div>
+  `;
+  if(!mine.length){
+    el.innerHTML = '<div class="works-empty">No works completed yet. Mark a report as resolved to showcase your impact here. ✨</div>';
+    return;
+  }
+  el.innerHTML = '<div class="works">' + mine.map(w=>`
+    <div class="work">
+      <div class="ribbon">RESOLVED</div>
+      <span class="wcat">${escapeHtml(w.cat)}</span>
+      <div class="wtext">${escapeHtml(w.text)}</div>
+      <div class="wglow">✨ ${escapeHtml(w.note)}</div>
+      <div class="wmeta"><span>✅ ${escapeHtml(fmtTs(w.ts))}</span><span>+15 pts</span></div>
+    </div>`).join("") + '</div>';
+}
+
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
 document.getElementById("points").textContent = state.points;
-renderFeed(); renderLeaderboard(); renderAudit();
+renderFeed(); renderLeaderboard(); renderAudit(); renderWorks();
 
 /* ============ COMPLAINT CARD ============ */
 function severityClass(s){
