@@ -494,13 +494,38 @@ drop.addEventListener("drop", ev=>{
 });
 fileInput.addEventListener("change", e=>{ const f=e.target.files?.[0]; if(f) handleFile(f); });
 
+function sniffMime(b64){
+  try{
+    const bin = atob(b64.slice(0, 24));
+    const b = [];
+    for(let i=0;i<bin.length;i++) b.push(bin.charCodeAt(i));
+    if(b[0]===0xFF && b[1]===0xD8 && b[2]===0xFF) return "image/jpeg";
+    if(b[0]===0x89 && b[1]===0x50 && b[2]===0x4E && b[3]===0x47) return "image/png";
+    if(b[0]===0x47 && b[1]===0x49 && b[2]===0x46) return "image/gif";
+    if(b[0]===0x52 && b[1]===0x49 && b[2]===0x46 && b[2]!==undefined && String.fromCharCode(b[8],b[9],b[10],b[11])==="WEBP") return "image/webp";
+    if(b[4]===0x66 && b[5]===0x74 && b[6]===0x79 && b[7]===0x70) return "image/heic"; // ftyp box → HEIC/HEIF
+    return null;
+  }catch(_){ return null; }
+}
+
 function handleFile(f){
   if(!f.type.startsWith("image/")){ showErr("photoErr","Please choose an image file."); return; }
   const reader = new FileReader();
   reader.onload = ()=>{
     const dataUrl = reader.result;
-    state.imgBase64 = dataUrl.split(",")[1];
-    state.imgMime = f.type;
+    const b64 = dataUrl.split(",")[1];
+    const sniffed = sniffMime(b64);
+    const allowed = ["image/png","image/jpeg","image/gif","image/webp"];
+    if(!sniffed || !allowed.includes(sniffed)){
+      showErr("photoErr", sniffed === "image/heic"
+        ? "HEIC images aren't supported. Please convert to JPEG or PNG and try again."
+        : "Unsupported image format. Please use a JPEG, PNG, GIF, or WEBP file.");
+      state.imgBase64 = null; state.imgMime = null;
+      document.getElementById("preview").style.display = "none";
+      return;
+    }
+    state.imgBase64 = b64;
+    state.imgMime = sniffed;
     document.getElementById("previewImg").src = dataUrl;
     document.getElementById("fileName").textContent = f.name + " • " + Math.round(f.size/1024) + " KB";
     document.getElementById("preview").style.display = "flex";
@@ -509,6 +534,7 @@ function handleFile(f){
   };
   reader.readAsDataURL(f);
 }
+
 
 document.getElementById("analyzeBtn").addEventListener("click", async ()=>{
   if(!state.imgBase64){ showErr("photoErr","Please choose an image first."); return; }
