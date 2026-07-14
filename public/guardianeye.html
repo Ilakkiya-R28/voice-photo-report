@@ -320,6 +320,7 @@ const state = (function loadState(){
       s.imgBase64 = null; s.imgMime = null;
       if(!Array.isArray(s.feed)) s.feed = DEFAULT_FEED.slice();
       if(!Array.isArray(s.audit)) s.audit = [];
+      if(!Array.isArray(s.works)) s.works = [];
       return s;
     }
   } catch(e){}
