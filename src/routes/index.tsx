@@ -6,7 +6,7 @@ export const Route = createFileRoute("/")({
       { title: "GuardianEye — See it. Say it. Solved." },
       { name: "description", content: "Hyperlocal civic issue reporting with AI vision & voice. Report potholes, leaks, garbage, and more using a photo or your voice." },
       { property: "og:title", content: "GuardianEye — See it. Say it. Solved." },
-      { property: "og:description", content: "Hyperlocal civic issue reporting with AI vision & voice." },
+      { property: "og:description", content: "Hyperlocal civic issue reporting with AI vision & voice. Report potholes, leaks, garbage, and more using a photo or your voice." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

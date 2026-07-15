@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "GuardianEye — Civic Issue Reporting" },
-      { name: "description", content: "GuardianEye helps residents report local civic issues with AI-powered photo, voice, and text complaint drafting." },
+      { title: "GuardianEye — See it. Say it. Solved." },
+      { name: "description", content: "Hyperlocal civic issue reporting with AI vision & voice. Report potholes, leaks, garbage, and more using a photo or your voice." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "GuardianEye — Civic Issue Reporting" },
-      { property: "og:description", content: "AI-powered hyperlocal reporting for potholes, leaks, garbage, streetlights, and public safety issues." },
+      { property: "og:title", content: "GuardianEye — See it. Say it. Solved." },
+      { property: "og:description", content: "Hyperlocal civic issue reporting with AI vision & voice. Report potholes, leaks, garbage, and more using a photo or your voice." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "GuardianEye — See it. Say it. Solved." },
+      { name: "twitter:description", content: "Hyperlocal civic issue reporting with AI vision & voice. Report potholes, leaks, garbage, and more using a photo or your voice." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/95ac6388-310e-47a5-8f59-13fed5216354/id-preview-1b1378c2--7f138aa8-9835-41e3-8a74-bf8f2f5f11d0.lovable.app-1784158197780.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/95ac6388-310e-47a5-8f59-13fed5216354/id-preview-1b1378c2--7f138aa8-9835-41e3-8a74-bf8f2f5f11d0.lovable.app-1784158197780.png" },
     ],
     links: [
       {
