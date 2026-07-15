@@ -547,6 +547,9 @@ function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":
 
 document.getElementById("points").textContent = state.points;
 renderFeed(); renderLeaderboard(); renderAudit(); renderWorks();
+window.addEventListener("beforeunload", persist);
+window.addEventListener("pagehide", persist);
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") persist(); });
 
 /* ============ COMPLAINT CARD ============ */
 function severityClass(s){
