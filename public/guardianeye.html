@@ -488,27 +488,32 @@ function renderFeed(){
 /* ============ WORKS DONE ============ */
 function resolveReport(id){
   const idx = state.feed.findIndex(f=>f.id===id);
-  if(idx<0) return;
+  if(idx<0){ alert("Report not found."); return; }
   const r = state.feed[idx];
   if(r.owner !== USER_ID){ alert("Only the person who filed this report can mark it resolved."); return; }
-  const note = prompt("How was it resolved? (Short note — shown on your Works Done)","Fixed by local authority");
-  if(note===null) return;
+  let note = "Fixed by local authority";
+  try {
+    const input = window.prompt("How was it resolved? (Short note — shown on your Works Done)", note);
+    if(input === null) return; // user cancelled
+    if(input.trim()) note = input.trim();
+  } catch(e){ /* prompt blocked — proceed with default note */ }
   const now = new Date();
   state.works.unshift({
     id: "w_" + now.getTime().toString(36),
     reportId: r.id,
     cat: r.cat,
     text: r.text,
-    note: (note||"").trim() || "Marked resolved",
+    note: note,
     ts: now.toISOString(),
     by: USER_ID,
   });
   state.feed.splice(idx,1);
-  // bonus points for resolving
   addPoints(15);
+  persist();
   renderFeed();
   renderWorks();
-  persist();
+  // scroll to works so user sees the impact
+  try { document.getElementById("worksDone")?.scrollIntoView({behavior:"smooth", block:"center"}); } catch(e){}
 }
 window.resolveReport = resolveReport;
 
